@@ -1,8 +1,7 @@
 import enum
-from sqlalchemy import (Column, Integer, String, Date, Time, Enum,
-                        ForeignKey, UniqueConstraint)
-from sqlalchemy.orm import relationship
-from database import Base
+import datetime as dt
+from typing import Optional, List
+from sqlmodel import SQLModel, Field, Relationship, UniqueConstraint
 
 
 class AttendanceStatus(str, enum.Enum):
@@ -10,33 +9,34 @@ class AttendanceStatus(str, enum.Enum):
     ABSENT = "Absent"
 
 
-class Employee(Base):
+class Employee(SQLModel, table=True):
     __tablename__ = "employees"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(120), unique=True, nullable=False, index=True)
-    department = Column(String(100), nullable=False)
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    name: str = Field(max_length=100, nullable=False)
+    email: str = Field(max_length=120, unique=True, index=True, nullable=False)
+    department: str = Field(max_length=100, nullable=False)
 
-    attendance = relationship("Attendance", back_populates="employee",
-                              cascade="all, delete-orphan")
+    attendance: List["Attendance"] = Relationship(
+        back_populates="employee",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
-class Attendance(Base):
+class Attendance(SQLModel, table=True):
     __tablename__ = "attendance"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"),
-                         nullable=False, index=True)
-    date = Column(Date, nullable=False, index=True)
-    status = Column(
-        Enum(AttendanceStatus, values_callable=lambda e: [x.value for x in e]),
-        nullable=False,
-    )
-    check_in = Column(Time, nullable=True)
-    check_out = Column(Time, nullable=True)
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
+    employee_id: int = Field(foreign_key="employees.id", ondelete="CASCADE", index=True)
 
-    employee = relationship("Employee", back_populates="attendance")
+    # Field name is 'date', but type is 'dt.date' to avoid Pydantic collision
+    date: dt.date = Field(index=True, nullable=False)
+
+    status: AttendanceStatus = Field(nullable=False)
+    check_in: Optional[dt.time] = Field(default=None)
+    check_out: Optional[dt.time] = Field(default=None)
+
+    employee: Optional[Employee] = Relationship(back_populates="attendance")
 
     __table_args__ = (
         UniqueConstraint("employee_id", "date", name="uq_employee_date"),

@@ -75,6 +75,7 @@ class EmployeeReportRecord(BaseModel):
     check_in: Optional[dt.time] = None
     check_out: Optional[dt.time] = None
     hours_worked: Optional[float] = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeReport(BaseModel):
